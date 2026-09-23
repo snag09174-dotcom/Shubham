@@ -1,13 +1,13 @@
-const $ = (selector) => document.querySelector(selector);
+const $ = (selector) =>
+  document.querySelector(selector);
 
-const $$ = (selector) => [
-  ...document.querySelectorAll(selector)
-];
+const $$ = (selector) =>
+  [...document.querySelectorAll(selector)];
 
 
-/* =========================
+/* =====================================================
    DEFAULT SCHEDULE
-========================= */
+===================================================== */
 
 const DEFAULTS = {
 
@@ -83,36 +83,74 @@ const DEFAULTS = {
 };
 
 
-/* =========================
-   STORAGE
-========================= */
+/* =====================================================
+   STORAGE KEYS
+===================================================== */
 
 const SETTINGS_KEY =
   "dailyfuel-settings-v1";
 
+const THEME_KEY =
+  "dailyfuel-theme-v1";
 
-function todayKey() {
+const UNDO_KEY =
+  "dailyfuel-undo-v1";
+
+
+/* =====================================================
+   DATE KEY
+===================================================== */
+
+function dateKey(date = new Date()) {
+
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(date.getMonth() + 1)
+      .padStart(2, "0");
+
+  const day =
+    String(date.getDate())
+      .padStart(2, "0");
 
   return (
     "dailyfuel-day-" +
-    new Date().toISOString().slice(0, 10)
+    year +
+    "-" +
+    month +
+    "-" +
+    day
   );
 
 }
 
 
-let settings = loadSettings();
+/* =====================================================
+   DATE STRING
+===================================================== */
 
-let dayState = loadDay();
+function localDateString(date = new Date()) {
 
-let editingTab = "weekday";
+  const year =
+    date.getFullYear();
 
-let lastAlertKey = "";
+  const month =
+    String(date.getMonth() + 1)
+      .padStart(2, "0");
+
+  const day =
+    String(date.getDate())
+      .padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+
+}
 
 
-/* =========================
-   LOAD SETTINGS
-========================= */
+/* =====================================================
+   SETTINGS
+===================================================== */
 
 function loadSettings() {
 
@@ -120,7 +158,9 @@ function loadSettings() {
 
     const saved =
       JSON.parse(
-        localStorage.getItem(SETTINGS_KEY)
+        localStorage.getItem(
+          SETTINGS_KEY
+        )
       );
 
     if (
@@ -142,24 +182,31 @@ function loadSettings() {
 }
 
 
-/* =========================
-   LOAD TODAY
-========================= */
+let settings =
+  loadSettings();
 
-function loadDay() {
+
+/* =====================================================
+   DAY STATE
+===================================================== */
+
+function loadDay(date = new Date()) {
 
   try {
 
     const saved =
       JSON.parse(
-        localStorage.getItem(todayKey())
+        localStorage.getItem(
+          dateKey(date)
+        )
       );
 
     if (saved) {
 
       return {
 
-        meals: saved.meals || {},
+        meals:
+          saved.meals || {},
 
         water:
           Number(saved.water) || 0
@@ -181,22 +228,49 @@ function loadDay() {
 }
 
 
-/* =========================
-   SAVE
-========================= */
+let dayState =
+  loadDay();
+
+
+/* =====================================================
+   GLOBAL STATE
+===================================================== */
+
+let editingTab =
+  "weekday";
+
+let lastAlertKey =
+  "";
+
+let undoStack =
+  loadUndoStack();
+
+let toastTimer =
+  null;
+
+
+/* =====================================================
+   SAVE DAY
+===================================================== */
 
 function saveDay() {
 
   localStorage.setItem(
 
-    todayKey(),
+    dateKey(),
 
-    JSON.stringify(dayState)
+    JSON.stringify(
+      dayState
+    )
 
   );
 
 }
 
+
+/* =====================================================
+   SAVE SETTINGS
+===================================================== */
 
 function saveSettingsData() {
 
@@ -204,43 +278,48 @@ function saveSettingsData() {
 
     SETTINGS_KEY,
 
-    JSON.stringify(settings)
+    JSON.stringify(
+      settings
+    )
 
   );
 
 }
 
 
-/* =========================
+/* =====================================================
    DAY TYPE
-========================= */
+===================================================== */
 
-function isCollegeDay() {
+function isCollegeDay(
+  date = new Date()
+) {
 
   const day =
-    new Date().getDay();
+    date.getDay();
 
-  return day >= 1 && day <= 5;
-
-}
-
-
-function activeSchedule() {
-
-  if (isCollegeDay()) {
-
-    return settings.weekday;
-
-  }
-
-  return settings.weekend;
+  return (
+    day >= 1 &&
+    day <= 5
+  );
 
 }
 
 
-/* =========================
+function activeSchedule(
+  date = new Date()
+) {
+
+  return isCollegeDay(date)
+    ? settings.weekday
+    : settings.weekend;
+
+}
+
+
+/* =====================================================
    DATE
-========================= */
+===================================================== */
 
 function formatDate() {
 
@@ -260,14 +339,16 @@ function formatDate() {
 
     }
 
-  ).format(new Date());
+  ).format(
+    new Date()
+  );
 
 }
 
 
-/* =========================
-   RENDER APP
-========================= */
+/* =====================================================
+   RENDER
+===================================================== */
 
 function render() {
 
@@ -292,36 +373,42 @@ function render() {
     $("#mealList");
 
 
-  list.innerHTML = "";
+  list.innerHTML =
+    "";
 
 
-  const now = new Date();
+  const now =
+    new Date();
+
 
   const nowMinutes =
     now.getHours() * 60 +
     now.getMinutes();
 
 
-  let next = null;
+  let next =
+    null;
 
 
   schedule.forEach(
-    (meal) => {
+    meal => {
 
-      const [hours, minutes] =
+      const [
+        hours,
+        minutes
+      ] =
         meal.time
           .split(":")
           .map(Number);
 
 
       const mealMinutes =
-        hours * 60 + minutes;
+        hours * 60 +
+        minutes;
 
 
       const key =
-        meal.time +
-        "|" +
-        meal.name;
+        mealKey(meal);
 
 
       const completed =
@@ -334,37 +421,38 @@ function render() {
         !next
       ) {
 
-        next = meal;
+        next =
+          meal;
 
       }
 
 
       const row =
-        document.createElement("label");
+        document.createElement(
+          "label"
+        );
 
 
       row.className =
         "meal" +
-        (completed ? " done" : "");
+        (
+          completed
+            ? " done"
+            : ""
+        );
 
 
       row.innerHTML = `
 
         <span class="meal-time">
-
           ${to12Hour(meal.time)}
-
         </span>
-
 
         <span class="meal-info">
 
           <span class="meal-name">
-
             ${escapeHtml(meal.name)}
-
           </span>
-
 
           <span class="meal-status">
 
@@ -378,21 +466,12 @@ function render() {
 
         </span>
 
-
         <input
-
           type="checkbox"
-
-          ${
-            completed
-              ? "checked"
-              : ""
-          }
-
+          ${completed ? "checked" : ""}
           aria-label="Mark ${
             escapeHtml(meal.name)
           } complete"
-
         >
 
       `;
@@ -402,20 +481,51 @@ function render() {
         .querySelector("input")
         .addEventListener(
           "change",
-          (event) => {
+          event => {
+
+            const previous =
+              dayState.meals[key] || false;
+
+            const nextValue =
+              event.target.checked;
+
+
+            pushUndo({
+
+              type:
+                "meal",
+
+              key,
+
+              previous,
+
+              next:
+                nextValue
+
+            });
+
 
             dayState.meals[key] =
-              event.target.checked;
+              nextValue;
+
 
             saveDay();
 
             render();
 
+            showToast(
+              nextValue
+                ? `${meal.name} completed`
+                : `${meal.name} unchecked`
+            );
+
           }
         );
 
 
-      list.appendChild(row);
+      list.appendChild(
+        row
+      );
 
     }
   );
@@ -425,7 +535,9 @@ function render() {
 
     $("#nextBadge").textContent =
       "Next: " +
-      to12Hour(next.time);
+      to12Hour(
+        next.time
+      );
 
   } else {
 
@@ -438,13 +550,18 @@ function render() {
   /* WATER */
 
   const water =
-    Math.max(0, dayState.water);
+    Math.max(
+      0,
+      dayState.water
+    );
 
 
-  const target = 2500;
+  const target =
+    2500;
 
 
-  $("#waterValue").textContent =
+  $("#waterValue")
+    .textContent =
     water;
 
 
@@ -455,24 +572,53 @@ function render() {
     );
 
 
-  $("#waterBar").style.width =
+  $("#waterBar")
+    .style.width =
     percentage + "%";
 
 
-  $("#waterPercent").textContent =
-    Math.round(percentage) + "%";
+  $("#waterPercent")
+    .textContent =
+    Math.round(
+      percentage
+    ) + "%";
+
+
+  renderStreak();
+
+  updateUndoButton();
 
 }
 
 
-/* =========================
+/* =====================================================
+   MEAL KEY
+===================================================== */
+
+function mealKey(meal) {
+
+  return (
+    meal.time +
+    "|" +
+    meal.name
+  );
+
+}
+
+
+/* =====================================================
    TIME FORMAT
-========================= */
+===================================================== */
 
 function to12Hour(time) {
 
-  const [hours, minutes] =
-    time.split(":").map(Number);
+  const [
+    hours,
+    minutes
+  ] =
+    time
+      .split(":")
+      .map(Number);
 
 
   const suffix =
@@ -489,7 +635,8 @@ function to12Hour(time) {
 
     hour +
     ":" +
-    String(minutes).padStart(2, "0") +
+    String(minutes)
+      .padStart(2, "0") +
     " " +
     suffix
 
@@ -498,34 +645,676 @@ function to12Hour(time) {
 }
 
 
-/* =========================
+/* =====================================================
    SECURITY
-========================= */
+===================================================== */
 
 function escapeHtml(value) {
 
   return String(value)
     .replace(
       /[&<>"']/g,
-
       character => ({
 
         "&": "&amp;",
+
         "<": "&lt;",
+
         ">": "&gt;",
+
         '"': "&quot;",
+
         "'": "&#039;"
 
       }[character])
-
     );
 
 }
 
 
-/* =========================
+/* =====================================================
+   STREAK SYSTEM
+===================================================== */
+
+/*
+   A day counts as complete when
+   EVERY scheduled meal for that
+   day has been checked.
+*/
+
+function isDayComplete(
+  date
+) {
+
+  const state =
+    loadDay(date);
+
+
+  const schedule =
+    activeSchedule(date);
+
+
+  if (
+    schedule.length === 0
+  ) {
+
+    return false;
+
+  }
+
+
+  return schedule.every(
+    meal =>
+      !!state.meals[
+        mealKey(meal)
+      ]
+  );
+
+}
+
+
+/* =====================================================
+   CURRENT STREAK
+===================================================== */
+
+function calculateCurrentStreak() {
+
+  const today =
+    new Date();
+
+
+  let streak =
+    0;
+
+
+  let cursor =
+    new Date(today);
+
+
+  /*
+     If today isn't finished,
+     start counting from yesterday.
+  */
+
+  if (
+    !isDayComplete(cursor)
+  ) {
+
+    cursor.setDate(
+      cursor.getDate() - 1
+    );
+
+  }
+
+
+  while (
+    isDayComplete(cursor)
+  ) {
+
+    streak++;
+
+
+    cursor.setDate(
+      cursor.getDate() - 1
+    );
+
+
+    /*
+       Safety limit.
+       Prevents an infinite loop.
+    */
+
+    if (
+      streak > 10000
+    ) {
+
+      break;
+
+    }
+
+  }
+
+
+  return streak;
+
+}
+
+
+/* =====================================================
+   BEST STREAK
+===================================================== */
+
+function calculateBestStreak() {
+
+  const dates =
+    getStoredDayDates();
+
+
+  if (
+    dates.length === 0
+  ) {
+
+    return 0;
+
+  }
+
+
+  dates.sort();
+
+
+  let best =
+    0;
+
+  let current =
+    0;
+
+
+  let previous =
+    null;
+
+
+  for (
+    const dateString of dates
+  ) {
+
+    const date =
+      parseLocalDate(
+        dateString
+      );
+
+
+    if (
+      !isDayComplete(date)
+    ) {
+
+      current =
+        0;
+
+      previous =
+        null;
+
+      continue;
+
+    }
+
+
+    if (
+      previous &&
+      daysBetween(
+        previous,
+        date
+      ) === 1
+    ) {
+
+      current++;
+
+    } else {
+
+      current =
+        1;
+
+    }
+
+
+    best =
+      Math.max(
+        best,
+        current
+      );
+
+
+    previous =
+      date;
+
+  }
+
+
+  return best;
+
+}
+
+
+/* =====================================================
+   STORED DATES
+===================================================== */
+
+function getStoredDayDates() {
+
+  const dates =
+    [];
+
+
+  for (
+    let i = 0;
+    i < localStorage.length;
+    i++
+  ) {
+
+    const key =
+      localStorage.key(i);
+
+
+    if (
+      key &&
+      key.startsWith(
+        "dailyfuel-day-"
+      )
+    ) {
+
+      dates.push(
+        key.replace(
+          "dailyfuel-day-",
+          ""
+        )
+      );
+
+    }
+
+  }
+
+
+  return dates;
+
+}
+
+
+/* =====================================================
+   PARSE LOCAL DATE
+===================================================== */
+
+function parseLocalDate(
+  dateString
+) {
+
+  const [
+    year,
+    month,
+    day
+  ] =
+    dateString
+      .split("-")
+      .map(Number);
+
+
+  return new Date(
+    year,
+    month - 1,
+    day
+  );
+
+}
+
+
+/* =====================================================
+   DATE DIFFERENCE
+===================================================== */
+
+function daysBetween(
+  first,
+  second
+) {
+
+  const a =
+    new Date(
+      first.getFullYear(),
+      first.getMonth(),
+      first.getDate()
+    );
+
+
+  const b =
+    new Date(
+      second.getFullYear(),
+      second.getMonth(),
+      second.getDate()
+    );
+
+
+  return Math.round(
+    (
+      b - a
+    ) /
+    86400000
+  );
+
+}
+
+
+/* =====================================================
+   RENDER STREAK
+===================================================== */
+
+function renderStreak() {
+
+  const current =
+    calculateCurrentStreak();
+
+
+  const best =
+    calculateBestStreak();
+
+
+  $("#streakNumber")
+    .textContent =
+    current;
+
+
+  $("#bestStreak")
+    .textContent =
+    best;
+
+
+  if (
+    isDayComplete(
+      new Date()
+    )
+  ) {
+
+    $("#streakMessage")
+      .textContent =
+      "🔥 Today's meals are complete. Keep the streak alive!";
+
+  }
+  else if (
+    current > 0
+  ) {
+
+    $("#streakMessage")
+      .textContent =
+      "Complete all today's meals to extend your streak.";
+
+  }
+  else {
+
+    $("#streakMessage")
+      .textContent =
+      "Complete all meals today to start your streak.";
+
+  }
+
+}
+
+
+/* =====================================================
+   UNDO SYSTEM
+===================================================== */
+
+function loadUndoStack() {
+
+  try {
+
+    const saved =
+      JSON.parse(
+        localStorage.getItem(
+          UNDO_KEY
+        )
+      );
+
+
+    if (
+      Array.isArray(saved)
+    ) {
+
+      return saved;
+
+    }
+
+  } catch (error) {}
+
+
+  return [];
+
+}
+
+
+function saveUndoStack() {
+
+  localStorage.setItem(
+
+    UNDO_KEY,
+
+    JSON.stringify(
+      undoStack
+    )
+
+  );
+
+}
+
+
+function pushUndo(action) {
+
+  undoStack.push({
+
+    ...action,
+
+    date:
+      localDateString()
+
+  });
+
+
+  /*
+     Keep only the last 20 actions.
+  */
+
+  if (
+    undoStack.length > 20
+  ) {
+
+    undoStack.shift();
+
+  }
+
+
+  saveUndoStack();
+
+}
+
+
+/* =====================================================
+   UNDO LAST ACTION
+===================================================== */
+
+function undoLastAction() {
+
+  if (
+    undoStack.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  const action =
+    undoStack.pop();
+
+
+  /*
+     Only allow undoing actions
+     belonging to today.
+  */
+
+  if (
+    action.date !==
+    localDateString()
+  ) {
+
+    saveUndoStack();
+
+    updateUndoButton();
+
+    return;
+
+  }
+
+
+  if (
+    action.type ===
+    "meal"
+  ) {
+
+    dayState.meals[
+      action.key
+    ] =
+      action.previous;
+
+
+    saveDay();
+
+
+    showToast(
+      "Meal action undone"
+    );
+
+  }
+
+
+  else if (
+    action.type ===
+    "water"
+  ) {
+
+    dayState.water =
+      action.previous;
+
+
+    saveDay();
+
+
+    showToast(
+      "Water action undone"
+    );
+
+  }
+
+
+  else if (
+    action.type ===
+    "reset"
+  ) {
+
+    dayState =
+      action.previous;
+
+
+    saveDay();
+
+
+    showToast(
+      "Reset undone"
+    );
+
+  }
+
+
+  saveUndoStack();
+
+  render();
+
+}
+
+
+/* =====================================================
+   UNDO BUTTON
+===================================================== */
+
+function updateUndoButton() {
+
+  const button =
+    $("#undoBtn");
+
+
+  button.disabled =
+    undoStack.length === 0;
+
+
+  button.title =
+    undoStack.length > 0
+      ? "Undo last action"
+      : "Nothing to undo";
+
+}
+
+
+/* =====================================================
+   TOAST
+===================================================== */
+
+function showToast(
+  message
+) {
+
+  const toast =
+    $("#toast");
+
+
+  $("#toastMessage")
+    .textContent =
+    message;
+
+
+  toast.classList.remove(
+    "hidden"
+  );
+
+
+  clearTimeout(
+    toastTimer
+  );
+
+
+  toastTimer =
+    setTimeout(
+      () => {
+
+        toast.classList.add(
+          "hidden"
+        );
+
+      },
+      3500
+    );
+
+}
+
+
+/* =====================================================
+   TOAST UNDO
+===================================================== */
+
+$("#toastUndo")
+  .addEventListener(
+    "click",
+    () => {
+
+      undoLastAction();
+
+
+      $("#toast")
+        .classList.add(
+          "hidden"
+        );
+
+    }
+  );
+
+
+/* =====================================================
+   UNDO BUTTON
+===================================================== */
+
+$("#undoBtn")
+  .addEventListener(
+    "click",
+    undoLastAction
+  );
+
+
+/* =====================================================
    SOUND
-========================= */
+===================================================== */
 
 function beep() {
 
@@ -536,7 +1325,13 @@ function beep() {
       window.webkitAudioContext;
 
 
-    if (!AudioContext) return;
+    if (
+      !AudioContext
+    ) {
+
+      return;
+
+    }
 
 
     const context =
@@ -557,11 +1352,18 @@ function beep() {
 
 
     const frequencies =
-      [880, 660, 880];
+      [
+        880,
+        660,
+        880
+      ];
 
 
     frequencies.forEach(
-      (frequency, index) => {
+      (
+        frequency,
+        index
+      ) => {
 
         const oscillator =
           context.createOscillator();
@@ -575,7 +1377,9 @@ function beep() {
           "sine";
 
 
-        oscillator.connect(gain);
+        oscillator.connect(
+          gain
+        );
 
 
         const start =
@@ -583,7 +1387,9 @@ function beep() {
           index * 0.18;
 
 
-        oscillator.start(start);
+        oscillator.start(
+          start
+        );
 
 
         oscillator.stop(
@@ -598,11 +1404,13 @@ function beep() {
 }
 
 
-/* =========================
+/* =====================================================
    NOTIFICATION
-========================= */
+===================================================== */
 
-function showNotification(meal) {
+function showNotification(
+  meal
+) {
 
   beep();
 
@@ -625,7 +1433,9 @@ function showNotification(meal) {
 
           body:
             "It's " +
-            to12Hour(meal.time) +
+            to12Hour(
+              meal.time
+            ) +
             ". Time to eat."
 
         }
@@ -686,17 +1496,15 @@ function showNotification(meal) {
         "DailyFuel — Food & Water Tracker";
 
     },
-
     5000
-
   );
 
 }
 
 
-/* =========================
-   CHECK ALERTS
-========================= */
+/* =====================================================
+   ALERT CHECKER
+===================================================== */
 
 function checkAlerts() {
 
@@ -725,9 +1533,7 @@ function checkAlerts() {
 
   const alertKey =
 
-    date
-      .toISOString()
-      .slice(0, 10)
+    localDateString(date)
 
     +
 
@@ -761,16 +1567,16 @@ function checkAlerts() {
 
 
     const key =
-      meal.time +
-      "|" +
-      meal.name;
+      mealKey(meal);
 
 
     if (
       !dayState.meals[key]
     ) {
 
-      showNotification(meal);
+      showNotification(
+        meal
+      );
 
     }
 
@@ -779,43 +1585,76 @@ function checkAlerts() {
 }
 
 
-/* =========================
+/* =====================================================
    WATER BUTTONS
-========================= */
+===================================================== */
 
 $$("[data-water]")
-  .forEach(button => {
+  .forEach(
+    button => {
 
-    button.addEventListener(
-      "click",
-      () => {
+      button.addEventListener(
+        "click",
+        () => {
 
-        dayState.water =
-          Math.max(
-
-            0,
-
-            dayState.water +
+          const amount =
             Number(
               button.dataset.water
-            )
+            );
+
+
+          const previous =
+            dayState.water;
+
+
+          const next =
+            Math.max(
+              0,
+              previous + amount
+            );
+
+
+          pushUndo({
+
+            type:
+              "water",
+
+            previous,
+
+            next
+
+          });
+
+
+          dayState.water =
+            next;
+
+
+          saveDay();
+
+          render();
+
+
+          showToast(
+
+            amount > 0
+
+              ? `Added ${amount} ml`
+
+              : `Removed ${Math.abs(amount)} ml`
 
           );
 
+        }
+      );
 
-        saveDay();
-
-        render();
-
-      }
-    );
-
-  });
+    }
+  );
 
 
-/* =========================
+/* =====================================================
    TEST SOUND
-========================= */
+===================================================== */
 
 $("#testSound")
   .addEventListener(
@@ -824,13 +1663,16 @@ $("#testSound")
 
       beep();
 
+
       if (
         "Notification" in window
       ) {
 
         Notification
           .requestPermission()
-          .catch(() => {});
+          .catch(
+            () => {}
+          );
 
       }
 
@@ -838,9 +1680,9 @@ $("#testSound")
   );
 
 
-/* =========================
+/* =====================================================
    RESET
-========================= */
+===================================================== */
 
 $("#resetBtn")
   .addEventListener(
@@ -849,13 +1691,33 @@ $("#resetBtn")
 
       const answer =
         confirm(
-
           "Reset today's meals and water?"
-
         );
 
 
-      if (!answer) return;
+      if (!answer) {
+
+        return;
+
+      }
+
+
+      const previous =
+        JSON.parse(
+          JSON.stringify(
+            dayState
+          )
+        );
+
+
+      pushUndo({
+
+        type:
+          "reset",
+
+        previous
+
+      });
 
 
       dayState = {
@@ -871,13 +1733,18 @@ $("#resetBtn")
 
       render();
 
+
+      showToast(
+        "Today has been reset"
+      );
+
     }
   );
 
 
-/* =========================
+/* =====================================================
    SETTINGS
-========================= */
+===================================================== */
 
 $("#settingsBtn")
   .addEventListener(
@@ -907,42 +1774,51 @@ $("#saveSettings")
   );
 
 
-/* TABS */
+/* =====================================================
+   SCHEDULE TABS
+===================================================== */
 
 $$(".tab")
-  .forEach(tab => {
+  .forEach(
+    tab => {
 
-    tab.addEventListener(
-      "click",
-      () => {
+      tab.addEventListener(
+        "click",
+        () => {
 
-        editingTab =
-          tab.dataset.tab;
-
-
-        $$(".tab")
-          .forEach(
-            item => {
-
-              item.classList.toggle(
-
-                "active",
-
-                item === tab
-
-              );
-
-            }
-          );
+          editingTab =
+            tab.dataset.tab;
 
 
-        renderEditor();
+          $$(".tab")
+            .forEach(
+              item => {
 
-      }
-    );
+                item.classList.toggle(
 
-  });
+                  "active",
 
+                  item ===
+                  tab
+
+                );
+
+              }
+            );
+
+
+          renderEditor();
+
+        }
+      );
+
+    }
+  );
+
+
+/* =====================================================
+   OPEN SETTINGS
+===================================================== */
 
 function openSettings() {
 
@@ -978,6 +1854,10 @@ function openSettings() {
 }
 
 
+/* =====================================================
+   CLOSE SETTINGS
+===================================================== */
+
 function closeSettings() {
 
   $("#settingsModal")
@@ -988,9 +1868,9 @@ function closeSettings() {
 }
 
 
-/* =========================
-   SETTINGS EDITOR
-========================= */
+/* =====================================================
+   RENDER SCHEDULE EDITOR
+===================================================== */
 
 function renderEditor() {
 
@@ -998,21 +1878,29 @@ function renderEditor() {
     $("#scheduleEditor");
 
 
-  editor.innerHTML = "";
+  editor.innerHTML =
+    "";
 
 
   const rows =
     settings[editingTab]
-      .map(meal => ({
-        ...meal
-      }));
+      .map(
+        meal => ({
+          ...meal
+        })
+      );
 
 
   rows.forEach(
-    (meal, index) => {
+    (
+      meal,
+      index
+    ) => {
 
       const row =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
 
       row.className =
@@ -1022,39 +1910,24 @@ function renderEditor() {
       row.innerHTML = `
 
         <input
-
           class="edit-name"
-
           value="${escapeHtml(
             meal.name
           )}"
-
           placeholder="Meal name"
-
         >
-
 
         <input
-
           class="edit-time"
-
           type="time"
-
           value="${meal.time}"
-
         >
-
 
         <button
-
           type="button"
-
           class="remove-meal"
-
         >
-
           ×
-
         </button>
 
       `;
@@ -1076,7 +1949,8 @@ function renderEditor() {
 
             settings[
               editingTab
-            ] = rows;
+            ] =
+              rows;
 
 
             renderEditor();
@@ -1085,17 +1959,23 @@ function renderEditor() {
         );
 
 
-      editor.appendChild(row);
+      editor.appendChild(
+        row
+      );
 
     }
   );
 
 
   const add =
-    document.createElement("button");
+    document.createElement(
+      "button"
+    );
 
 
-  add.type = "button";
+  add.type =
+    "button";
+
 
   add.className =
     "secondary";
@@ -1111,16 +1991,19 @@ function renderEditor() {
 
       rows.push({
 
-        time: "12:00",
+        time:
+          "12:00",
 
-        name: "New meal"
+        name:
+          "New meal"
 
       });
 
 
       settings[
         editingTab
-      ] = rows;
+      ] =
+        rows;
 
 
       renderEditor();
@@ -1129,14 +2012,16 @@ function renderEditor() {
   );
 
 
-  editor.appendChild(add);
+  editor.appendChild(
+    add
+  );
 
 }
 
 
-/* =========================
+/* =====================================================
    SAVE SCHEDULE
-========================= */
+===================================================== */
 
 function saveEditedSettings() {
 
@@ -1148,10 +2033,13 @@ function saveEditedSettings() {
     ];
 
 
-  const result = [];
+  const result =
+    [];
 
 
-  for (const row of rows) {
+  for (
+    const row of rows
+  ) {
 
     const name =
       row
@@ -1170,7 +2058,10 @@ function saveEditedSettings() {
         .value;
 
 
-    if (!name || !time) {
+    if (
+      !name ||
+      !time
+    ) {
 
       alert(
         "Please enter a meal name and time."
@@ -1193,7 +2084,10 @@ function saveEditedSettings() {
 
 
   result.sort(
-    (a, b) =>
+    (
+      a,
+      b
+    ) =>
       a.time.localeCompare(
         b.time
       )
@@ -1202,7 +2096,8 @@ function saveEditedSettings() {
 
   settings[
     editingTab
-  ] = result;
+  ] =
+    result;
 
 
   saveSettingsData();
@@ -1215,18 +2110,386 @@ function saveEditedSettings() {
 }
 
 
-/* =========================
+/* =====================================================
+   THEME SYSTEM
+===================================================== */
+
+const DEFAULT_THEME = {
+
+  mode:
+    "light",
+
+  accent:
+    "#2d9c63",
+
+  background:
+    "#f4f7f5",
+
+  card:
+    "#ffffff"
+
+};
+
+
+function loadTheme() {
+
+  try {
+
+    const saved =
+      JSON.parse(
+        localStorage.getItem(
+          THEME_KEY
+        )
+      );
+
+
+    if (saved) {
+
+      return {
+
+        ...DEFAULT_THEME,
+
+        ...saved
+
+      };
+
+    }
+
+  } catch (error) {}
+
+
+  return {
+    ...DEFAULT_THEME
+  };
+
+}
+
+
+let theme =
+  loadTheme();
+
+
+/* =====================================================
+   APPLY THEME
+===================================================== */
+
+function applyTheme() {
+
+  const body =
+    document.body;
+
+
+  body.dataset.theme =
+    theme.mode;
+
+
+  body.style.setProperty(
+
+    "--custom-accent",
+
+    theme.accent
+
+  );
+
+
+  body.style.setProperty(
+
+    "--custom-background",
+
+    theme.background
+
+  );
+
+
+  body.style.setProperty(
+
+    "--custom-card",
+
+    theme.card
+
+  );
+
+
+  localStorage.setItem(
+
+    THEME_KEY,
+
+    JSON.stringify(
+      theme
+    )
+
+  );
+
+
+  $$(".theme-option")
+    .forEach(
+      button => {
+
+        button.classList.toggle(
+
+          "active",
+
+          button.dataset.themeChoice ===
+          theme.mode
+
+        );
+
+      }
+    );
+
+
+  $("#accentColor")
+    .value =
+    theme.accent;
+
+
+  $("#backgroundColor")
+    .value =
+    theme.background;
+
+
+  $("#cardColor")
+    .value =
+    theme.card;
+
+}
+
+
+/* =====================================================
+   THEME BUTTON
+===================================================== */
+
+$("#themeBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      $("#themeModal")
+        .classList.remove(
+          "hidden"
+        );
+
+
+      applyTheme();
+
+    }
+  );
+
+
+/* =====================================================
+   CLOSE THEME
+===================================================== */
+
+$("#closeTheme")
+  .addEventListener(
+    "click",
+    () => {
+
+      $("#themeModal")
+        .classList.add(
+          "hidden"
+        );
+
+    }
+  );
+
+
+/* =====================================================
+   THEME OPTIONS
+===================================================== */
+
+$$(".theme-option")
+  .forEach(
+    button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          theme.mode =
+            button.dataset.themeChoice;
+
+
+          applyTheme();
+
+        }
+      );
+
+    }
+  );
+
+
+/* =====================================================
+   COLOR INPUTS
+===================================================== */
+
+$("#accentColor")
+  .addEventListener(
+    "input",
+    event => {
+
+      theme.accent =
+        event.target.value;
+
+
+      if (
+        theme.mode ===
+        "custom"
+      ) {
+
+        applyTheme();
+
+      }
+
+    }
+  );
+
+
+$("#backgroundColor")
+  .addEventListener(
+    "input",
+    event => {
+
+      theme.background =
+        event.target.value;
+
+
+      if (
+        theme.mode ===
+        "custom"
+      ) {
+
+        applyTheme();
+
+      }
+
+    }
+  );
+
+
+$("#cardColor")
+  .addEventListener(
+    "input",
+    event => {
+
+      theme.card =
+        event.target.value;
+
+
+      if (
+        theme.mode ===
+        "custom"
+      ) {
+
+        applyTheme();
+
+      }
+
+    }
+  );
+
+
+/* =====================================================
+   SAVE THEME
+===================================================== */
+
+$("#saveTheme")
+  .addEventListener(
+    "click",
+    () => {
+
+      theme.accent =
+        $("#accentColor")
+          .value;
+
+
+      theme.background =
+        $("#backgroundColor")
+          .value;
+
+
+      theme.card =
+        $("#cardColor")
+          .value;
+
+
+      localStorage.setItem(
+
+        THEME_KEY,
+
+        JSON.stringify(
+          theme
+        )
+
+      );
+
+
+      applyTheme();
+
+
+      $("#themeModal")
+        .classList.add(
+          "hidden"
+        );
+
+
+      showToast(
+        "Theme applied"
+      );
+
+    }
+  );
+
+
+/* =====================================================
+   RESET THEME
+===================================================== */
+
+$("#resetTheme")
+  .addEventListener(
+    "click",
+    () => {
+
+      theme =
+        {
+          ...DEFAULT_THEME
+        };
+
+
+      applyTheme();
+
+
+      showToast(
+        "Theme reset"
+      );
+
+    }
+  );
+
+
+/* =====================================================
    START APP
-========================= */
+===================================================== */
+
+applyTheme();
 
 render();
 
+
+/*
+   Check meal alerts every second.
+*/
 
 setInterval(
   checkAlerts,
   1000
 );
 
+
+/*
+   Refresh the interface every
+   30 seconds.
+*/
 
 setInterval(
   render,
