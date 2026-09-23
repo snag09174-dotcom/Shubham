@@ -1,7 +1,12 @@
-const $ = (selector) =>
+/* =====================================================
+   DAILYFUEL
+   Food + Water Tracker
+===================================================== */
+
+const $ = selector =>
   document.querySelector(selector);
 
-const $$ = (selector) =>
+const $$ = selector =>
   [...document.querySelectorAll(selector)];
 
 
@@ -9,37 +14,47 @@ const $$ = (selector) =>
    DEFAULT SCHEDULE
 ===================================================== */
 
+/*
+   IMPORTANT:
+
+   Weekdays:
+   09:00 Breakfast
+   11:30 Meal 2
+   16:00 Meal 3
+   19:00 Dinner
+   22:00 Light meal
+
+   There is NO meal between 12:00 and 4:00 PM.
+
+   4:00 PM itself IS allowed.
+*/
+
 const DEFAULTS = {
 
   weekday: [
 
     {
-      time: "08:00",
+      time: "09:00",
       name: "Breakfast"
     },
 
     {
-      time: "11:00",
+      time: "11:30",
       name: "Meal 2"
     },
 
     {
-      time: "14:00",
-      name: "Lunch"
+      time: "16:00",
+      name: "Meal 3"
     },
 
     {
-      time: "17:00",
-      name: "Meal 4"
-    },
-
-    {
-      time: "20:00",
+      time: "19:00",
       name: "Dinner"
     },
 
     {
-      time: "23:00",
+      time: "22:00",
       name: "Light meal"
     }
 
@@ -49,33 +64,28 @@ const DEFAULTS = {
   weekend: [
 
     {
-      time: "08:00",
+      time: "09:00",
       name: "Breakfast"
     },
 
     {
-      time: "11:00",
-      name: "Meal 2"
-    },
-
-    {
-      time: "14:00",
+      time: "12:00",
       name: "Lunch"
     },
 
     {
-      time: "17:00",
+      time: "15:00",
+      name: "Meal 3"
+    },
+
+    {
+      time: "18:00",
       name: "Meal 4"
     },
 
     {
-      time: "20:00",
+      time: "21:00",
       name: "Dinner"
-    },
-
-    {
-      time: "23:00",
-      name: "Light meal"
     }
 
   ]
@@ -84,35 +94,39 @@ const DEFAULTS = {
 
 
 /* =====================================================
-   STORAGE KEYS
+   STORAGE
 ===================================================== */
 
 const SETTINGS_KEY =
-  "dailyfuel-settings-v1";
+  "dailyfuel-settings-v2";
 
 const THEME_KEY =
-  "dailyfuel-theme-v1";
+  "dailyfuel-theme-v2";
 
 const UNDO_KEY =
-  "dailyfuel-undo-v1";
+  "dailyfuel-undo-v2";
 
 
 /* =====================================================
-   DATE KEY
+   DATE
 ===================================================== */
 
-function dateKey(date = new Date()) {
+function dateKey(
+  date = new Date()
+) {
 
   const year =
     date.getFullYear();
 
   const month =
-    String(date.getMonth() + 1)
-      .padStart(2, "0");
+    String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
 
   const day =
-    String(date.getDate())
-      .padStart(2, "0");
+    String(
+      date.getDate()
+    ).padStart(2, "0");
 
   return (
     "dailyfuel-day-" +
@@ -126,24 +140,15 @@ function dateKey(date = new Date()) {
 }
 
 
-/* =====================================================
-   DATE STRING
-===================================================== */
+function localDateString(
+  date = new Date()
+) {
 
-function localDateString(date = new Date()) {
-
-  const year =
-    date.getFullYear();
-
-  const month =
-    String(date.getMonth() + 1)
-      .padStart(2, "0");
-
-  const day =
-    String(date.getDate())
-      .padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return dateKey(date)
+    .replace(
+      "dailyfuel-day-",
+      ""
+    );
 
 }
 
@@ -175,6 +180,7 @@ function loadSettings() {
 
   } catch (error) {}
 
+
   return JSON.parse(
     JSON.stringify(DEFAULTS)
   );
@@ -190,7 +196,9 @@ let settings =
    DAY STATE
 ===================================================== */
 
-function loadDay(date = new Date()) {
+function loadDay(
+  date = new Date()
+) {
 
   try {
 
@@ -200,6 +208,7 @@ function loadDay(date = new Date()) {
           dateKey(date)
         )
       );
+
 
     if (saved) {
 
@@ -217,6 +226,7 @@ function loadDay(date = new Date()) {
 
   } catch (error) {}
 
+
   return {
 
     meals: {},
@@ -233,7 +243,7 @@ let dayState =
 
 
 /* =====================================================
-   GLOBAL STATE
+   GLOBAL
 ===================================================== */
 
 let editingTab =
@@ -245,12 +255,23 @@ let lastAlertKey =
 let undoStack =
   loadUndoStack();
 
-let toastTimer =
+
+/* =====================================================
+   ALARM ENGINE
+===================================================== */
+
+let audioContext =
   null;
+
+let alarmTimer =
+  null;
+
+let alarmActive =
+  false;
 
 
 /* =====================================================
-   SAVE DAY
+   SAVE
 ===================================================== */
 
 function saveDay() {
@@ -267,10 +288,6 @@ function saveDay() {
 
 }
 
-
-/* =====================================================
-   SAVE SETTINGS
-===================================================== */
 
 function saveSettingsData() {
 
@@ -318,29 +335,92 @@ function activeSchedule(
 
 
 /* =====================================================
-   DATE
+   FORMAT
 ===================================================== */
 
 function formatDate() {
 
   return new Intl.DateTimeFormat(
-
     undefined,
-
     {
-
       weekday: "long",
-
       year: "numeric",
-
       month: "long",
-
       day: "numeric"
-
     }
-
   ).format(
     new Date()
+  );
+
+}
+
+
+function to12Hour(time) {
+
+  const [
+    hours,
+    minutes
+  ] =
+    time
+      .split(":")
+      .map(Number);
+
+
+  const suffix =
+    hours >= 12
+      ? "PM"
+      : "AM";
+
+
+  const hour =
+    hours % 12 || 12;
+
+
+  return (
+    hour +
+    ":" +
+    String(minutes)
+      .padStart(2, "0") +
+    " " +
+    suffix
+  );
+
+}
+
+
+function escapeHtml(value) {
+
+  return String(value)
+    .replace(
+      /[&<>"']/g,
+      character => ({
+
+        "&": "&amp;",
+
+        "<": "&lt;",
+
+        ">": "&gt;",
+
+        '"': "&quot;",
+
+        "'": "&#039;"
+
+      }[character])
+    );
+
+}
+
+
+/* =====================================================
+   MEAL KEY
+===================================================== */
+
+function mealKey(meal) {
+
+  return (
+    meal.time +
+    "|" +
+    meal.name
   );
 
 }
@@ -455,13 +535,11 @@ function render() {
           </span>
 
           <span class="meal-status">
-
             ${
               completed
                 ? "Completed"
                 : "Eat at this time"
             }
-
           </span>
 
         </span>
@@ -469,9 +547,6 @@ function render() {
         <input
           type="checkbox"
           ${completed ? "checked" : ""}
-          aria-label="Mark ${
-            escapeHtml(meal.name)
-          } complete"
         >
 
       `;
@@ -484,7 +559,8 @@ function render() {
           event => {
 
             const previous =
-              dayState.meals[key] || false;
+              !!dayState.meals[key];
+
 
             const nextValue =
               event.target.checked;
@@ -513,10 +589,15 @@ function render() {
 
             render();
 
+
             showToast(
+
               nextValue
+
                 ? `${meal.name} completed`
+
                 : `${meal.name} unchecked`
+
             );
 
           }
@@ -535,9 +616,7 @@ function render() {
 
     $("#nextBadge").textContent =
       "Next: " +
-      to12Hour(
-        next.time
-      );
+      to12Hour(next.time);
 
   } else {
 
@@ -592,95 +671,8 @@ function render() {
 
 
 /* =====================================================
-   MEAL KEY
+   STREAK
 ===================================================== */
-
-function mealKey(meal) {
-
-  return (
-    meal.time +
-    "|" +
-    meal.name
-  );
-
-}
-
-
-/* =====================================================
-   TIME FORMAT
-===================================================== */
-
-function to12Hour(time) {
-
-  const [
-    hours,
-    minutes
-  ] =
-    time
-      .split(":")
-      .map(Number);
-
-
-  const suffix =
-    hours >= 12
-      ? "PM"
-      : "AM";
-
-
-  const hour =
-    hours % 12 || 12;
-
-
-  return (
-
-    hour +
-    ":" +
-    String(minutes)
-      .padStart(2, "0") +
-    " " +
-    suffix
-
-  );
-
-}
-
-
-/* =====================================================
-   SECURITY
-===================================================== */
-
-function escapeHtml(value) {
-
-  return String(value)
-    .replace(
-      /[&<>"']/g,
-      character => ({
-
-        "&": "&amp;",
-
-        "<": "&lt;",
-
-        ">": "&gt;",
-
-        '"': "&quot;",
-
-        "'": "&#039;"
-
-      }[character])
-    );
-
-}
-
-
-/* =====================================================
-   STREAK SYSTEM
-===================================================== */
-
-/*
-   A day counts as complete when
-   EVERY scheduled meal for that
-   day has been checked.
-*/
 
 function isDayComplete(
   date
@@ -713,13 +705,9 @@ function isDayComplete(
 }
 
 
-/* =====================================================
-   CURRENT STREAK
-===================================================== */
-
 function calculateCurrentStreak() {
 
-  const today =
+  let cursor =
     new Date();
 
 
@@ -727,13 +715,9 @@ function calculateCurrentStreak() {
     0;
 
 
-  let cursor =
-    new Date(today);
-
-
   /*
-     If today isn't finished,
-     start counting from yesterday.
+     If today's meals are not complete,
+     count backwards from yesterday.
   */
 
   if (
@@ -759,11 +743,6 @@ function calculateCurrentStreak() {
     );
 
 
-    /*
-       Safety limit.
-       Prevents an infinite loop.
-    */
-
     if (
       streak > 10000
     ) {
@@ -780,26 +759,102 @@ function calculateCurrentStreak() {
 }
 
 
-/* =====================================================
-   BEST STREAK
-===================================================== */
-
-function calculateBestStreak() {
+function getStoredDayDates() {
 
   const dates =
-    getStoredDayDates();
+    [];
 
 
-  if (
-    dates.length === 0
+  for (
+    let i = 0;
+    i < localStorage.length;
+    i++
   ) {
 
-    return 0;
+    const key =
+      localStorage.key(i);
+
+
+    if (
+      key &&
+      key.startsWith(
+        "dailyfuel-day-"
+      )
+    ) {
+
+      dates.push(
+        key.replace(
+          "dailyfuel-day-",
+          ""
+        )
+      );
+
+    }
 
   }
 
 
-  dates.sort();
+  return dates;
+
+}
+
+
+function parseLocalDate(
+  value
+) {
+
+  const [
+    year,
+    month,
+    day
+  ] =
+    value
+      .split("-")
+      .map(Number);
+
+
+  return new Date(
+    year,
+    month - 1,
+    day
+  );
+
+}
+
+
+function daysBetween(
+  first,
+  second
+) {
+
+  const a =
+    new Date(
+      first.getFullYear(),
+      first.getMonth(),
+      first.getDate()
+    );
+
+
+  const b =
+    new Date(
+      second.getFullYear(),
+      second.getMonth(),
+      second.getDate()
+    );
+
+
+  return Math.round(
+    (b - a) / 86400000
+  );
+
+}
+
+
+function calculateBestStreak() {
+
+  const dates =
+    getStoredDayDates()
+      .sort();
 
 
   let best =
@@ -807,7 +862,6 @@ function calculateBestStreak() {
 
   let current =
     0;
-
 
   let previous =
     null;
@@ -874,116 +928,6 @@ function calculateBestStreak() {
 }
 
 
-/* =====================================================
-   STORED DATES
-===================================================== */
-
-function getStoredDayDates() {
-
-  const dates =
-    [];
-
-
-  for (
-    let i = 0;
-    i < localStorage.length;
-    i++
-  ) {
-
-    const key =
-      localStorage.key(i);
-
-
-    if (
-      key &&
-      key.startsWith(
-        "dailyfuel-day-"
-      )
-    ) {
-
-      dates.push(
-        key.replace(
-          "dailyfuel-day-",
-          ""
-        )
-      );
-
-    }
-
-  }
-
-
-  return dates;
-
-}
-
-
-/* =====================================================
-   PARSE LOCAL DATE
-===================================================== */
-
-function parseLocalDate(
-  dateString
-) {
-
-  const [
-    year,
-    month,
-    day
-  ] =
-    dateString
-      .split("-")
-      .map(Number);
-
-
-  return new Date(
-    year,
-    month - 1,
-    day
-  );
-
-}
-
-
-/* =====================================================
-   DATE DIFFERENCE
-===================================================== */
-
-function daysBetween(
-  first,
-  second
-) {
-
-  const a =
-    new Date(
-      first.getFullYear(),
-      first.getMonth(),
-      first.getDate()
-    );
-
-
-  const b =
-    new Date(
-      second.getFullYear(),
-      second.getMonth(),
-      second.getDate()
-    );
-
-
-  return Math.round(
-    (
-      b - a
-    ) /
-    86400000
-  );
-
-}
-
-
-/* =====================================================
-   RENDER STREAK
-===================================================== */
-
 function renderStreak() {
 
   const current =
@@ -1012,18 +956,20 @@ function renderStreak() {
 
     $("#streakMessage")
       .textContent =
-      "🔥 Today's meals are complete. Keep the streak alive!";
+      "🔥 Today's meals are complete. Keep it alive!";
 
   }
+
   else if (
     current > 0
   ) {
 
     $("#streakMessage")
       .textContent =
-      "Complete all today's meals to extend your streak.";
+      "Complete today's meals to extend your streak.";
 
   }
+
   else {
 
     $("#streakMessage")
@@ -1036,7 +982,7 @@ function renderStreak() {
 
 
 /* =====================================================
-   UNDO SYSTEM
+   UNDO
 ===================================================== */
 
 function loadUndoStack() {
@@ -1094,10 +1040,6 @@ function pushUndo(action) {
   });
 
 
-  /*
-     Keep only the last 20 actions.
-  */
-
   if (
     undoStack.length > 20
   ) {
@@ -1111,10 +1053,6 @@ function pushUndo(action) {
 
 }
 
-
-/* =====================================================
-   UNDO LAST ACTION
-===================================================== */
 
 function undoLastAction() {
 
@@ -1130,11 +1068,6 @@ function undoLastAction() {
   const action =
     undoStack.pop();
 
-
-  /*
-     Only allow undoing actions
-     belonging to today.
-  */
 
   if (
     action.date !==
@@ -1216,24 +1149,11 @@ function undoLastAction() {
 }
 
 
-/* =====================================================
-   UNDO BUTTON
-===================================================== */
-
 function updateUndoButton() {
 
-  const button =
-    $("#undoBtn");
-
-
-  button.disabled =
+  $("#undoBtn")
+    .disabled =
     undoStack.length === 0;
-
-
-  button.title =
-    undoStack.length > 0
-      ? "Undo last action"
-      : "Nothing to undo";
 
 }
 
@@ -1241,6 +1161,10 @@ function updateUndoButton() {
 /* =====================================================
    TOAST
 ===================================================== */
+
+let toastTimer =
+  null;
+
 
 function showToast(
   message
@@ -1281,125 +1205,283 @@ function showToast(
 
 
 /* =====================================================
-   TOAST UNDO
+   ALARM AUDIO
 ===================================================== */
 
-$("#toastUndo")
-  .addEventListener(
-    "click",
-    () => {
+/*
+   The alarm does NOT create a new AudioContext
+   every second.
 
-      undoLastAction();
+   Instead, one AudioContext is reused and a short
+   repeating pattern is scheduled until one minute
+   has passed.
 
+   Web Audio supports oscillator sources with explicit
+   start/stop times. 
+*/
 
-      $("#toast")
-        .classList.add(
-          "hidden"
-        );
+async function getAudioContext() {
 
-    }
-  );
-
-
-/* =====================================================
-   UNDO BUTTON
-===================================================== */
-
-$("#undoBtn")
-  .addEventListener(
-    "click",
-    undoLastAction
-  );
-
-
-/* =====================================================
-   SOUND
-===================================================== */
-
-function beep() {
-
-  try {
+  if (!audioContext) {
 
     const AudioContext =
       window.AudioContext ||
       window.webkitAudioContext;
 
 
-    if (
-      !AudioContext
-    ) {
+    if (!AudioContext) {
 
-      return;
+      return null;
 
     }
 
 
-    const context =
+    audioContext =
       new AudioContext();
 
-
-    const gain =
-      context.createGain();
+  }
 
 
-    gain.gain.value =
-      0.08;
+  if (
+    audioContext.state ===
+    "suspended"
+  ) {
+
+    await audioContext.resume();
+
+  }
 
 
-    gain.connect(
-      context.destination
-    );
+  return audioContext;
+
+}
 
 
-    const frequencies =
-      [
-        880,
-        660,
-        880
-      ];
+/* =====================================================
+   ONE ALARM BEEP
+===================================================== */
+
+async function playAlarmBeep(
+  startTime
+) {
+
+  const context =
+    await getAudioContext();
 
 
-    frequencies.forEach(
-      (
+  if (!context) {
+
+    return;
+
+  }
+
+
+  const frequencies =
+    [
+      880,
+      660,
+      880
+    ];
+
+
+  frequencies.forEach(
+    (
+      frequency,
+      index
+    ) => {
+
+      const oscillator =
+        context.createOscillator();
+
+
+      const gain =
+        context.createGain();
+
+
+      oscillator.type =
+        "sine";
+
+
+      oscillator.frequency.setValueAtTime(
         frequency,
-        index
-      ) => {
-
-        const oscillator =
-          context.createOscillator();
+        startTime +
+        index * .18
+      );
 
 
-        oscillator.frequency.value =
-          frequency;
+      gain.gain.setValueAtTime(
+        .0001,
+        startTime +
+        index * .18
+      );
 
 
-        oscillator.type =
-          "sine";
+      gain.gain.exponentialRampToValueAtTime(
+        .16,
+        startTime +
+        index * .18 +
+        .02
+      );
 
 
-        oscillator.connect(
-          gain
-        );
+      gain.gain.exponentialRampToValueAtTime(
+        .0001,
+        startTime +
+        index * .18 +
+        .14
+      );
 
 
-        const start =
-          context.currentTime +
-          index * 0.18;
+      oscillator.connect(
+        gain
+      );
 
 
-        oscillator.start(
-          start
-        );
+      gain.connect(
+        context.destination
+      );
 
 
-        oscillator.stop(
-          start + 0.12
-        );
+      oscillator.start(
+        startTime +
+        index * .18
+      );
 
-      }
+
+      oscillator.stop(
+        startTime +
+        index * .18 +
+        .16
+      );
+
+    }
+  );
+
+}
+
+
+/* =====================================================
+   START 1-MINUTE ALARM
+===================================================== */
+
+async function startAlarm(
+  mealName = "Meal time"
+) {
+
+  stopAlarm();
+
+
+  alarmActive =
+    true;
+
+
+  $("#alarmTitle")
+    .textContent =
+    "🔔 " +
+    mealName;
+
+
+  $("#alarmControl")
+    .classList.remove(
+      "hidden"
     );
 
-  } catch (error) {}
+
+  const context =
+    await getAudioContext();
+
+
+  if (!context) {
+
+    return;
+
+  }
+
+
+  /*
+     Play the first beep immediately.
+  */
+
+  playAlarmBeep(
+    context.currentTime
+  );
+
+
+  /*
+     Then repeat every 3 seconds.
+     The entire alarm automatically stops
+     after 60 seconds.
+  */
+
+  let elapsed =
+    3;
+
+
+  alarmTimer =
+    setInterval(
+      () => {
+
+        if (
+          !alarmActive
+        ) {
+
+          return;
+
+        }
+
+
+        playAlarmBeep(
+          context.currentTime
+        );
+
+
+        elapsed += 3;
+
+
+        if (
+          elapsed >= 60
+        ) {
+
+          stopAlarm();
+
+        }
+
+      },
+      3000
+    );
+
+}
+
+
+/* =====================================================
+   STOP ALARM
+===================================================== */
+
+function stopAlarm() {
+
+  alarmActive =
+    false;
+
+
+  if (
+    alarmTimer
+  ) {
+
+    clearInterval(
+      alarmTimer
+    );
+
+
+    alarmTimer =
+      null;
+
+  }
+
+
+  $("#alarmControl")
+    .classList.add(
+      "hidden"
+    );
 
 }
 
@@ -1412,7 +1494,9 @@ function showNotification(
   meal
 ) {
 
-  beep();
+  startAlarm(
+    meal.name
+  );
 
 
   if (
@@ -1476,34 +1560,20 @@ function showNotification(
             }
 
           }
+        )
+        .catch(
+          () => {}
         );
 
     }
 
   }
 
-
-  document.title =
-    "🔔 " +
-    meal.name +
-    " — DailyFuel";
-
-
-  setTimeout(
-    () => {
-
-      document.title =
-        "DailyFuel — Food & Water Tracker";
-
-    },
-    5000
-  );
-
 }
 
 
 /* =====================================================
-   ALERT CHECKER
+   CHECK ALERTS
 ===================================================== */
 
 function checkAlerts() {
@@ -1586,7 +1656,50 @@ function checkAlerts() {
 
 
 /* =====================================================
-   WATER BUTTONS
+   STOP BUTTON
+===================================================== */
+
+$("#stopAlarm")
+  .addEventListener(
+    "click",
+    stopAlarm
+  );
+
+
+/* =====================================================
+   TEST 1-MIN ALARM
+===================================================== */
+
+$("#testSound")
+  .addEventListener(
+    "click",
+    () => {
+
+      startAlarm(
+        "Test alarm"
+      );
+
+
+      if (
+        "Notification" in window &&
+        Notification.permission ===
+        "default"
+      ) {
+
+        Notification
+          .requestPermission()
+          .catch(
+            () => {}
+          );
+
+      }
+
+    }
+  );
+
+
+/* =====================================================
+   WATER
 ===================================================== */
 
 $$("[data-water]")
@@ -1653,28 +1766,28 @@ $$("[data-water]")
 
 
 /* =====================================================
-   TEST SOUND
+   UNDO
 ===================================================== */
 
-$("#testSound")
+$("#undoBtn")
+  .addEventListener(
+    "click",
+    undoLastAction
+  );
+
+
+$("#toastUndo")
   .addEventListener(
     "click",
     () => {
 
-      beep();
+      undoLastAction();
 
 
-      if (
-        "Notification" in window
-      ) {
-
-        Notification
-          .requestPermission()
-          .catch(
-            () => {}
-          );
-
-      }
+      $("#toast")
+        .classList.add(
+          "hidden"
+        );
 
     }
   );
@@ -1689,13 +1802,11 @@ $("#resetBtn")
     "click",
     () => {
 
-      const answer =
-        confirm(
+      if (
+        !confirm(
           "Reset today's meals and water?"
-        );
-
-
-      if (!answer) {
+        )
+      ) {
 
         return;
 
@@ -1774,10 +1885,6 @@ $("#saveSettings")
   );
 
 
-/* =====================================================
-   SCHEDULE TABS
-===================================================== */
-
 $$(".tab")
   .forEach(
     tab => {
@@ -1816,10 +1923,6 @@ $$(".tab")
   );
 
 
-/* =====================================================
-   OPEN SETTINGS
-===================================================== */
-
 function openSettings() {
 
   editingTab =
@@ -1854,10 +1957,6 @@ function openSettings() {
 }
 
 
-/* =====================================================
-   CLOSE SETTINGS
-===================================================== */
-
 function closeSettings() {
 
   $("#settingsModal")
@@ -1869,7 +1968,50 @@ function closeSettings() {
 
 
 /* =====================================================
-   RENDER SCHEDULE EDITOR
+   COLLEGE TIME VALIDATION
+===================================================== */
+
+/*
+   12:00 PM through 3:59 PM = blocked.
+
+   4:00 PM = allowed.
+
+   This means:
+   12:00 -> blocked
+   13:00 -> blocked
+   14:00 -> blocked
+   15:59 -> blocked
+   16:00 -> allowed
+*/
+
+function isCollegeBlockedTime(
+  time
+) {
+
+  const [
+    hour,
+    minute
+  ] =
+    time
+      .split(":")
+      .map(Number);
+
+
+  const total =
+    hour * 60 +
+    minute;
+
+
+  return (
+    total >= 720 &&
+    total < 960
+  );
+
+}
+
+
+/* =====================================================
+   RENDER EDITOR
 ===================================================== */
 
 function renderEditor() {
@@ -1992,7 +2134,12 @@ function renderEditor() {
       rows.push({
 
         time:
-          "12:00",
+          editingTab ===
+          "weekday"
+
+            ? "16:00"
+
+            : "12:00",
 
         name:
           "New meal"
@@ -2020,7 +2167,7 @@ function renderEditor() {
 
 
 /* =====================================================
-   SAVE SCHEDULE
+   SAVE EDITED SCHEDULE
 ===================================================== */
 
 function saveEditedSettings() {
@@ -2064,7 +2211,28 @@ function saveEditedSettings() {
     ) {
 
       alert(
-        "Please enter a meal name and time."
+        "Please enter both meal name and time."
+      );
+
+      return;
+
+    }
+
+
+    /*
+       HARD BLOCK for college schedule.
+    */
+
+    if (
+      editingTab ===
+      "weekday" &&
+      isCollegeBlockedTime(
+        time
+      )
+    ) {
+
+      alert(
+        "College schedule cannot contain a meal between 12:00 PM and 4:00 PM. 4:00 PM is allowed."
       );
 
       return;
@@ -2082,6 +2250,10 @@ function saveEditedSettings() {
 
   }
 
+
+  /*
+     Sort chronologically.
+  */
 
   result.sort(
     (
@@ -2107,11 +2279,16 @@ function saveEditedSettings() {
 
   render();
 
+
+  showToast(
+    "Schedule saved"
+  );
+
 }
 
 
 /* =====================================================
-   THEME SYSTEM
+   THEME
 ===================================================== */
 
 const DEFAULT_THEME = {
@@ -2170,6 +2347,53 @@ let theme =
 
 
 /* =====================================================
+   COLOR HELPERS
+===================================================== */
+
+/*
+   Generate a readable soft version
+   of the selected accent color.
+*/
+
+function hexToRgba(
+  hex,
+  alpha
+) {
+
+  const clean =
+    hex.replace(
+      "#",
+      ""
+    );
+
+
+  const r =
+    parseInt(
+      clean.substring(0, 2),
+      16
+    );
+
+
+  const g =
+    parseInt(
+      clean.substring(2, 4),
+      16
+    );
+
+
+  const b =
+    parseInt(
+      clean.substring(4, 6),
+      16
+    );
+
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
+}
+
+
+/* =====================================================
    APPLY THEME
 ===================================================== */
 
@@ -2183,42 +2407,52 @@ function applyTheme() {
     theme.mode;
 
 
-  body.style.setProperty(
+  /*
+     These variables are explicitly set on
+     the BODY, so custom colors actually
+     override the CSS variables.
+  */
 
+  body.style.setProperty(
     "--custom-accent",
-
     theme.accent
-
   );
 
 
   body.style.setProperty(
-
     "--custom-background",
-
     theme.background
-
   );
 
 
   body.style.setProperty(
-
     "--custom-card",
-
     theme.card
-
   );
 
 
-  localStorage.setItem(
-
-    THEME_KEY,
-
-    JSON.stringify(
-      theme
+  body.style.setProperty(
+    "--custom-accent-soft",
+    hexToRgba(
+      theme.accent,
+      .13
     )
-
   );
+
+
+  $("#accentColor")
+    .value =
+    theme.accent;
+
+
+  $("#backgroundColor")
+    .value =
+    theme.background;
+
+
+  $("#cardColor")
+    .value =
+    theme.card;
 
 
   $$(".theme-option")
@@ -2238,25 +2472,21 @@ function applyTheme() {
     );
 
 
-  $("#accentColor")
-    .value =
-    theme.accent;
+  localStorage.setItem(
 
+    THEME_KEY,
 
-  $("#backgroundColor")
-    .value =
-    theme.background;
+    JSON.stringify(
+      theme
+    )
 
-
-  $("#cardColor")
-    .value =
-    theme.card;
+  );
 
 }
 
 
 /* =====================================================
-   THEME BUTTON
+   THEME MODAL
 ===================================================== */
 
 $("#themeBtn")
@@ -2264,21 +2494,17 @@ $("#themeBtn")
     "click",
     () => {
 
+      applyTheme();
+
+
       $("#themeModal")
         .classList.remove(
           "hidden"
         );
 
-
-      applyTheme();
-
     }
   );
 
-
-/* =====================================================
-   CLOSE THEME
-===================================================== */
 
 $("#closeTheme")
   .addEventListener(
@@ -2295,7 +2521,7 @@ $("#closeTheme")
 
 
 /* =====================================================
-   THEME OPTIONS
+   THEME CHOICES
 ===================================================== */
 
 $$(".theme-option")
@@ -2320,7 +2546,7 @@ $$(".theme-option")
 
 
 /* =====================================================
-   COLOR INPUTS
+   CUSTOM COLORS
 ===================================================== */
 
 $("#accentColor")
@@ -2332,14 +2558,11 @@ $("#accentColor")
         event.target.value;
 
 
-      if (
-        theme.mode ===
-        "custom"
-      ) {
+      theme.mode =
+        "custom";
 
-        applyTheme();
 
-      }
+      applyTheme();
 
     }
   );
@@ -2354,14 +2577,11 @@ $("#backgroundColor")
         event.target.value;
 
 
-      if (
-        theme.mode ===
-        "custom"
-      ) {
+      theme.mode =
+        "custom";
 
-        applyTheme();
 
-      }
+      applyTheme();
 
     }
   );
@@ -2376,14 +2596,11 @@ $("#cardColor")
         event.target.value;
 
 
-      if (
-        theme.mode ===
-        "custom"
-      ) {
+      theme.mode =
+        "custom";
 
-        applyTheme();
 
-      }
+      applyTheme();
 
     }
   );
@@ -2413,15 +2630,9 @@ $("#saveTheme")
           .value;
 
 
-      localStorage.setItem(
-
-        THEME_KEY,
-
-        JSON.stringify(
-          theme
-        )
-
-      );
+      theme.mode =
+        theme.mode ||
+        "custom";
 
 
       applyTheme();
@@ -2468,7 +2679,7 @@ $("#resetTheme")
 
 
 /* =====================================================
-   START APP
+   START
 ===================================================== */
 
 applyTheme();
@@ -2477,7 +2688,7 @@ render();
 
 
 /*
-   Check meal alerts every second.
+   Check alarm every second.
 */
 
 setInterval(
@@ -2487,8 +2698,7 @@ setInterval(
 
 
 /*
-   Refresh the interface every
-   30 seconds.
+   Refresh UI.
 */
 
 setInterval(
