@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DailyFuel — Food & Water Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+  <header class="top">
+    <div>
+      <div class="brand">DailyFuel</div>
+      <div class="date" id="date"></div>
+    </div>
+
+    <div class="top-actions">
+      <button class="secondary" id="settingsBtn">⚙ Schedule</button>
+      <button class="secondary" id="resetBtn">Reset Today</button>
+    </div>
+  </header>
+
+  <main class="grid">
+
+    <!-- FOOD -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>🍽️ Food Schedule</h2>
+          <p id="dayMode"></p>
+        </div>
+
+        <span class="badge" id="nextBadge">
+          Checking...
+        </span>
+      </div>
+
+      <div id="mealList"></div>
+    </section>
+
+
+    <!-- WATER -->
+    <section class="card">
+
+      <div class="card-head">
+        <div>
+          <h2>💧 Water</h2>
+          <p>Daily target: 2.5 L</p>
+        </div>
+      </div>
+
+      <div class="water-num">
+        <span id="waterValue">0</span> ml
+      </div>
+
+      <div class="progress">
+        <div id="waterBar"></div>
+      </div>
+
+      <div class="water-percent" id="waterPercent">
+        0%
+      </div>
+
+      <div class="button-row">
+        <button class="primary" data-water="250">
+          +250 ml
+        </button>
+
+        <button data-water="500">
+          +500 ml
+        </button>
+
+        <button data-water="-250">
+          −250 ml
+        </button>
+      </div>
+
+    </section>
+
+
+    <!-- ALERT -->
+    <section class="card full">
+
+      <div class="card-head">
+
+        <div>
+          <h2>🔔 Alerts</h2>
+
+          <p>
+            DailyFuel will alert you when it's time to eat.
+          </p>
+        </div>
+
+        <button class="primary" id="testSound">
+          Test Sound
+        </button>
+
+      </div>
+
+      <div class="notice">
+
+        <strong>How it works:</strong>
+
+        At each scheduled meal time, the website plays
+        an alert sound and shows a notification.
+
+        After eating, tick the checkbox beside the meal.
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<!-- SETTINGS MODAL -->
+
+<div class="modal hidden" id="settingsModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+
+      <div>
+        <h2>Schedule Settings</h2>
+
+        <p>
+          Create different schedules for college days
+          and weekends.
+        </p>
+      </div>
+
+      <button class="icon-btn" id="closeSettings">
+        ×
+      </button>
+
+    </div>
+
+
+    <div class="tabs">
+
+      <button
+        class="tab active"
+        data-tab="weekday">
+
+        Mon–Fri · College
+
+      </button>
+
+      <button
+        class="tab"
+        data-tab="weekend">
+
+        Sat–Sun · Free
+
+      </button>
+
+    </div>
+
+
+    <div id="scheduleEditor"></div>
+
+
+    <div class="modal-actions">
+
+      <button
+        class="secondary"
+        id="cancelSettings">
+
+        Cancel
+
+      </button>
+
+      <button
+        class="primary"
+        id="saveSettings">
+
+        Save Schedule
+
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
