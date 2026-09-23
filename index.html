@@ -13,8 +13,7 @@
 
 <div class="app">
 
-  <!-- ================= HEADER ================= -->
-
+  <!-- HEADER -->
   <header class="top">
 
     <div>
@@ -28,8 +27,15 @@
         🎨 Theme
       </button>
 
-      <button class="secondary" id="undoBtn" disabled>
-        ↩ Undo
+      <!-- UNDO IS NOW AN ICON -->
+      <button
+        class="undo-icon"
+        id="undoBtn"
+        disabled
+        title="Undo last action"
+        aria-label="Undo last action"
+      >
+        ↶
       </button>
 
       <button class="secondary" id="settingsBtn">
@@ -45,8 +51,7 @@
   </header>
 
 
-  <!-- ================= STREAK ================= -->
-
+  <!-- STREAK -->
   <section class="streak-card">
 
     <div class="streak-icon">
@@ -60,27 +65,32 @@
         Day Streak
       </div>
 
-      <div class="streak-subtitle" id="streakMessage">
+      <div
+        class="streak-subtitle"
+        id="streakMessage"
+      >
         Complete all meals today to start your streak.
       </div>
 
     </div>
 
     <div class="best-streak">
+
       <span>Best</span>
-      <strong id="bestStreak">0</strong>
+
+      <strong id="bestStreak">
+        0
+      </strong>
+
     </div>
 
   </section>
 
 
-  <!-- ================= MAIN ================= -->
-
+  <!-- MAIN -->
   <main class="grid">
 
-
     <!-- FOOD -->
-
     <section class="card">
 
       <div class="card-head">
@@ -93,7 +103,10 @@
 
         </div>
 
-        <span class="badge" id="nextBadge">
+        <span
+          class="badge"
+          id="nextBadge"
+        >
           Checking...
         </span>
 
@@ -105,7 +118,6 @@
 
 
     <!-- WATER -->
-
     <section class="card">
 
       <div class="card-head">
@@ -120,14 +132,15 @@
 
       </div>
 
-
       <div class="water-num">
 
-        <span id="waterValue">0</span>
+        <span id="waterValue">
+          0
+        </span>
+
         ml
 
       </div>
-
 
       <div class="progress">
 
@@ -135,23 +148,31 @@
 
       </div>
 
-
-      <div class="water-percent" id="waterPercent">
+      <div
+        class="water-percent"
+        id="waterPercent"
+      >
         0%
       </div>
 
-
       <div class="button-row">
 
-        <button class="primary" data-water="250">
+        <button
+          class="primary"
+          data-water="250"
+        >
           +250 ml
         </button>
 
-        <button data-water="500">
+        <button
+          data-water="500"
+        >
           +500 ml
         </button>
 
-        <button data-water="-250">
+        <button
+          data-water="-250"
+        >
           −250 ml
         </button>
 
@@ -160,8 +181,7 @@
     </section>
 
 
-    <!-- ALERT -->
-
+    <!-- ALERTS -->
     <section class="card full">
 
       <div class="card-head">
@@ -171,13 +191,44 @@
           <h2>🔔 Alerts</h2>
 
           <p>
-            DailyFuel will alert you when it's time to eat.
+            Meal alarms repeat for one minute.
           </p>
 
         </div>
 
-        <button class="primary" id="testSound">
-          Test Sound
+        <button
+          class="primary"
+          id="testSound"
+        >
+          Test 1-Min Alarm
+        </button>
+
+      </div>
+
+
+      <!-- STOP ALARM -->
+      <div
+        class="alarm-control hidden"
+        id="alarmControl"
+      >
+
+        <div>
+
+          <strong id="alarmTitle">
+            🔔 Meal time
+          </strong>
+
+          <span>
+            Alarm is ringing...
+          </span>
+
+        </div>
+
+        <button
+          class="stop-alarm"
+          id="stopAlarm"
+        >
+          Stop Alarm
         </button>
 
       </div>
@@ -187,10 +238,9 @@
 
         <strong>How it works:</strong>
 
-        At each scheduled meal time, the website plays
-        an alert sound and shows a notification.
-
-        After eating, tick the checkbox beside the meal.
+        At each scheduled meal time, the alarm
+        repeats for up to one minute. You can stop
+        it manually at any time.
 
       </div>
 
@@ -201,10 +251,12 @@
 </div>
 
 
+<!-- THEME MODAL -->
 
-<!-- ================= THEME MODAL ================= -->
-
-<div class="modal hidden" id="themeModal">
+<div
+  class="modal hidden"
+  id="themeModal"
+>
 
   <div class="modal-box theme-box">
 
@@ -215,12 +267,15 @@
         <h2>🎨 Appearance</h2>
 
         <p>
-          Customize how DailyFuel looks.
+          Choose a theme or create your own.
         </p>
 
       </div>
 
-      <button class="icon-btn" id="closeTheme">
+      <button
+        class="icon-btn"
+        id="closeTheme"
+      >
         ×
       </button>
 
@@ -229,17 +284,26 @@
 
     <div class="theme-options">
 
-      <button class="theme-option" data-theme-choice="light">
+      <button
+        class="theme-option"
+        data-theme-choice="light"
+      >
         ☀️
         <span>Light</span>
       </button>
 
-      <button class="theme-option" data-theme-choice="dark">
+      <button
+        class="theme-option"
+        data-theme-choice="dark"
+      >
         🌙
         <span>Dark</span>
       </button>
 
-      <button class="theme-option" data-theme-choice="custom">
+      <button
+        class="theme-option"
+        data-theme-choice="custom"
+      >
         🎨
         <span>Custom</span>
       </button>
@@ -247,18 +311,20 @@
     </div>
 
 
-    <div class="custom-colors" id="customColors">
+    <div
+      class="custom-colors"
+      id="customColors"
+    >
 
       <h3>Custom Colors</h3>
 
       <label class="color-row">
 
-        <span>Accent Color</span>
+        <span>Accent</span>
 
         <input
           type="color"
           id="accentColor"
-          value="#2d9c63"
         >
 
       </label>
@@ -271,7 +337,6 @@
         <input
           type="color"
           id="backgroundColor"
-          value="#f4f7f5"
         >
 
       </label>
@@ -279,12 +344,11 @@
 
       <label class="color-row">
 
-        <span>Card Color</span>
+        <span>Cards</span>
 
         <input
           type="color"
           id="cardColor"
-          value="#ffffff"
         >
 
       </label>
@@ -294,11 +358,17 @@
 
     <div class="modal-actions">
 
-      <button class="secondary" id="resetTheme">
-        Reset Theme
+      <button
+        class="secondary"
+        id="resetTheme"
+      >
+        Reset
       </button>
 
-      <button class="primary" id="saveTheme">
+      <button
+        class="primary"
+        id="saveTheme"
+      >
         Apply Theme
       </button>
 
@@ -309,10 +379,12 @@
 </div>
 
 
+<!-- SCHEDULE MODAL -->
 
-<!-- ================= SCHEDULE MODAL ================= -->
-
-<div class="modal hidden" id="settingsModal">
+<div
+  class="modal hidden"
+  id="settingsModal"
+>
 
   <div class="modal-box">
 
@@ -323,15 +395,28 @@
         <h2>Schedule Settings</h2>
 
         <p>
-          Create different schedules for college days
-          and weekends.
+          College days and free days have separate schedules.
         </p>
 
       </div>
 
-      <button class="icon-btn" id="closeSettings">
+      <button
+        class="icon-btn"
+        id="closeSettings"
+      >
         ×
       </button>
+
+    </div>
+
+
+    <div class="schedule-rule">
+
+      🏫 <strong>College rule:</strong>
+
+      No meals can be scheduled between
+      <strong>12:00 PM and 4:00 PM</strong>.
+      4:00 PM itself is allowed.
 
     </div>
 
@@ -381,10 +466,12 @@
 </div>
 
 
+<!-- TOAST -->
 
-<!-- ================= TOAST ================= -->
-
-<div class="toast hidden" id="toast">
+<div
+  class="toast hidden"
+  id="toast"
+>
 
   <span id="toastMessage">
     Done
